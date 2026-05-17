@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Contact Us | GiftMart</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container nav-content">
+            <a href="index.html" class="logo"><i class="fa-solid fa-gift"></i> GiftMart</a>
+            <ul class="nav-links">
+                <li><a href="index.html" class="nav-link">Home</a></li>
+                <li><a href="about.html" class="nav-link">About</a></li>
+                <li><a href="contact.html" class="nav-link active">Contact</a></li>
+                <li><a href="terms.html" class="nav-link">Terms</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="section">
+        <div class="container">
+            <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 4rem; align-items: start;">
+                <div>
+                    <h1 class="hero-title" style="font-size: 2.5rem; text-align: left;">Get in Touch</h1>
+                    <p class="hero-subtitle" style="text-align: left; margin-left: 0;">Have questions? Our support team is available 24/7 to assist you.</p>
+                    
+                    <div style="margin-top: 3rem;">
+                        <div style="display: flex; gap: 1.5rem; margin-bottom: 2rem;">
+                            <div style="width: 50px; height: 50px; background: #eef2ff; color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                                <i class="fa-solid fa-envelope"></i>
+                            </div>
+                            <div>
+                                <h4 style="margin-bottom: 0.25rem;">Email Support</h4>
+                                <p>support@giftmart.example.com</p>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 1.5rem; margin-bottom: 2rem;">
+                            <div style="width: 50px; height: 50px; background: #eef2ff; color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                                <i class="fa-solid fa-location-dot"></i>
+                            </div>
+                            <div>
+                                <h4 style="margin-bottom: 0.25rem;">Office Address</h4>
+                                <p>Digital Plaza, Sector 44, Gurgaon, India</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: white; padding: 2.5rem; border-radius: 1rem; border: 1px solid var(--border); box-shadow: var(--shadow-md);">
+                    <h3 style="margin-bottom: 1.5rem;">Send a Message</h3>
+                    <form onsubmit="event.preventDefault(); alert('Message sent! We will contact you soon.'); this.reset();">
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">Full Name</label>
+                            <input type="text" placeholder="Your Name" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem; outline: none; font-family: inherit;" required>
+                        </div>
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">Email Address</label>
+                            <input type="email" placeholder="Your Email" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem; outline: none; font-family: inherit;" required>
+                        </div>
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">Message</label>
+                            <textarea rows="5" placeholder="How can we help you?" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem; outline: none; font-family: inherit; resize: none;" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="index.html" class="logo footer-logo">
+                        <i class="fa-solid fa-gift"></i> GiftMart
+                    </a>
+                    <p class="footer-text">GiftMart is the leading destination for digital gift cards.</p>
+                </div>
+                <div>
+                    <h4 class="footer-title">Company</h4>
+                    <ul class="footer-links">
+                        <li><a href="about.html" class="footer-link">About Us</a></li>
+                        <li><a href="contact.html" class="footer-link">Contact</a></li>
+                        <li><a href="terms.html" class="footer-link">Terms of Service</a></li>
+                        <li><a href="privacy.html" class="footer-link">Privacy Policy</a></li>
+                        <li><a href="refund-policy.html" class="footer-link">Refund Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 GiftMart. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

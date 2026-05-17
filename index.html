@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>GiftMart | Premium Digital Gift Card Store</title>
+    <meta name="description" content="Buy premium gift cards from 500+ top brands including Amazon, Zomato, and Swiggy. Instant delivery and 100% secure payments.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Main Styles -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container nav-content">
+            <a href="index.html" class="logo">
+                <i class="fa-solid fa-gift"></i> GiftMart
+            </a>
+            
+            <ul class="nav-links">
+                <li><a href="index.html" class="nav-link active">Home</a></li>
+                <li><a href="about.html" class="nav-link">About</a></li>
+                <li><a href="contact.html" class="nav-link">Contact</a></li>
+                <li><a href="terms.html" class="nav-link">Terms</a></li>
+            </ul>
+            
+            <div class="nav-actions">
+                <a href="login.html" class="btn btn-primary" id="auth-btn">Login / Sign Up</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="container">
+            <span class="hero-badge">Verified Gift Card Marketplace</span>
+            <h1 class="hero-title">The Perfect Gift for <br><span style="color: var(--primary)">Every Occasion.</span></h1>
+            <p class="hero-subtitle">Access 500+ digital gift cards from top global brands. Simple, secure, and delivered instantly to your email.</p>
+            <div class="hero-btns">
+                <a href="#browse" class="btn btn-primary">Browse Cards</a>
+                <a href="about.html" class="btn btn-outline">Learn More</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Product Section -->
+    <section class="section" id="browse">
+        <div class="container">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">Popular Gift Cards</h2>
+                    <p style="color: var(--text-muted)">Choose from the most loved brands worldwide.</p>
+                </div>
+                <a href="#" class="btn btn-outline">View All Brands</a>
+            </div>
+            
+            <div class="grid">
+                <!-- Amazon -->
+                <div class="card">
+                    <div class="card-image" style="background: #232f3e; color: #ff9900;">
+                        <i class="fa-brands fa-amazon"></i>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-tag">Shopping</span>
+                        <h3 class="card-title">Amazon Gift Card</h3>
+                        <div class="amount-controls" style="margin-bottom: 1rem;">
+                            <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.5rem;">Enter Amount (₹2,000+)</label>
+                            <input type="number" class="card-amount-input" placeholder="Min ₹2,000" min="2000" value="2000" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.4rem; outline: none; font-weight: 700;">
+                        </div>
+                        <div class="card-footer">
+                            <div class="value-display">
+                                <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">Get Value:</span>
+                                <span class="get-value-badge" style="font-weight: 700; color: var(--success);">₹2,000</span>
+                            </div>
+                            <button class="btn btn-primary btn-sm add-to-cart" data-id="amazon" data-name="Amazon">Buy Now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Zomato -->
+                <div class="card">
+                    <div class="card-image" style="background: #e23744; color: white;">
+                        <i class="fa-solid fa-utensils"></i>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-tag">Food</span>
+                        <h3 class="card-title">Zomato Gift Card</h3>
+                        <div class="amount-controls" style="margin-bottom: 1rem;">
+                            <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.5rem;">Enter Amount (₹2,000+)</label>
+                            <input type="number" class="card-amount-input" placeholder="Min ₹2,000" min="2000" value="2000" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.4rem; outline: none; font-weight: 700;">
+                        </div>
+                        <div class="card-footer">
+                            <div class="value-display">
+                                <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">Get Value:</span>
+                                <span class="get-value-badge" style="font-weight: 700; color: var(--success);">₹2,000</span>
+                            </div>
+                            <button class="btn btn-primary btn-sm add-to-cart" data-id="zomato" data-name="Zomato">Buy Now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Swiggy -->
+                <div class="card">
+                    <div class="card-image" style="background: #fc8019; color: white;">
+                        <i class="fa-solid fa-burger"></i>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-tag">Delivery</span>
+                        <h3 class="card-title">Swiggy Gift Card</h3>
+                        <div class="amount-controls" style="margin-bottom: 1rem;">
+                            <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.5rem;">Enter Amount (₹2,000+)</label>
+                            <input type="number" class="card-amount-input" placeholder="Min ₹2,000" min="2000" value="2000" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.4rem; outline: none; font-weight: 700;">
+                        </div>
+                        <div class="card-footer">
+                            <div class="value-display">
+                                <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">Get Value:</span>
+                                <span class="get-value-badge" style="font-weight: 700; color: var(--success);">₹2,000</span>
+                            </div>
+                            <button class="btn btn-primary btn-sm add-to-cart" data-id="swiggy" data-name="Swiggy">Buy Now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flipkart -->
+                <div class="card">
+                    <div class="card-image" style="background: #2874f0; color: white;">
+                        <i class="fa-solid fa-bag-shopping"></i>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-tag">Retail</span>
+                        <h3 class="card-title">Flipkart Gift Card</h3>
+                        <div class="amount-controls" style="margin-bottom: 1rem;">
+                            <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.5rem;">Enter Amount (₹2,000+)</label>
+                            <input type="number" class="card-amount-input" placeholder="Min ₹2,000" min="2000" value="2000" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.4rem; outline: none; font-weight: 700;">
+                        </div>
+                        <div class="card-footer">
+                            <div class="value-display">
+                                <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">Get Value:</span>
+                                <span class="get-value-badge" style="font-weight: 700; color: var(--success);">₹2,000</span>
+                            </div>
+                            <button class="btn btn-primary btn-sm add-to-cart" data-id="flipkart" data-name="Flipkart">Buy Now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ajio -->
+                <div class="card">
+                    <div class="card-image" style="background: #2f4156; color: white;">
+                        <span style="font-size: 1.5rem; font-weight: 800;">AJIO</span>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-tag">Fashion</span>
+                        <h3 class="card-title">Ajio Gift Card</h3>
+                        <div class="amount-controls" style="margin-bottom: 1rem;">
+                            <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.5rem;">Enter Amount (₹2,000+)</label>
+                            <input type="number" class="card-amount-input" placeholder="Min ₹2,000" min="2000" value="2000" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.4rem; outline: none; font-weight: 700;">
+                        </div>
+                        <div class="card-footer">
+                            <div class="value-display">
+                                <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">Get Value:</span>
+                                <span class="get-value-badge" style="font-weight: 700; color: var(--success);">₹2,000</span>
+                            </div>
+                            <button class="btn btn-primary btn-sm add-to-cart" data-id="ajio" data-name="Ajio">Buy Now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Zepto -->
+                <div class="card">
+                    <div class="card-image" style="background: #381057; color: white;">
+                        <span style="font-size: 1.5rem; font-weight: 800; font-style: italic;">zepto</span>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-tag">Grocery</span>
+                        <h3 class="card-title">Zepto Gift Card</h3>
+                        <div class="amount-controls" style="margin-bottom: 1rem;">
+                            <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.5rem;">Enter Amount (₹2,000+)</label>
+                            <input type="number" class="card-amount-input" placeholder="Min ₹2,000" min="2000" value="2000" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.4rem; outline: none; font-weight: 700;">
+                        </div>
+                        <div class="card-footer">
+                            <div class="value-display">
+                                <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">Get Value:</span>
+                                <span class="get-value-badge" style="font-weight: 700; color: var(--success);">₹2,000</span>
+                            </div>
+                            <button class="btn btn-primary btn-sm add-to-cart" data-id="zepto" data-name="Zepto">Buy Now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Blinkit -->
+                <div class="card">
+                    <div class="card-image" style="background: #f8cb46; color: black;">
+                        <span style="font-size: 1.5rem; font-weight: 800;">blinkit</span>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-tag">Essentials</span>
+                        <h3 class="card-title">Blinkit Gift Card</h3>
+                        <div class="amount-controls" style="margin-bottom: 1rem;">
+                            <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.5rem;">Enter Amount (₹2,000+)</label>
+                            <input type="number" class="card-amount-input" placeholder="Min ₹2,000" min="2000" value="2000" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.4rem; outline: none; font-weight: 700;">
+                        </div>
+                        <div class="card-footer">
+                            <div class="value-display">
+                                <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">Get Value:</span>
+                                <span class="get-value-badge" style="font-weight: 700; color: var(--success);">₹2,000</span>
+                            </div>
+                            <button class="btn btn-primary btn-sm add-to-cart" data-id="blinkit" data-name="Blinkit">Buy Now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Swiggy Instamart -->
+                <div class="card">
+                    <div class="card-image" style="background: #fc8019; color: white;">
+                        <i class="fa-solid fa-basket-shopping"></i>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-tag">Instamart</span>
+                        <h3 class="card-title">Instamart Gift Card</h3>
+                        <div class="amount-controls" style="margin-bottom: 1rem;">
+                            <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.5rem;">Enter Amount (₹2,000+)</label>
+                            <input type="number" class="card-amount-input" placeholder="Min ₹2,000" min="2000" value="2000" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.4rem; outline: none; font-weight: 700;">
+                        </div>
+                        <div class="card-footer">
+                            <div class="value-display">
+                                <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">Get Value:</span>
+                                <span class="get-value-badge" style="font-weight: 700; color: var(--success);">₹2,000</span>
+                            </div>
+                            <button class="btn btn-primary btn-sm add-to-cart" data-id="instamart" data-name="Instamart">Buy Now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dominos -->
+                <div class="card">
+                    <div class="card-image" style="background: #006491; color: white;">
+                        <i class="fa-solid fa-pizza-slice"></i>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-tag">Dining</span>
+                        <h3 class="card-title">Dominos Gift Card</h3>
+                        <div class="amount-controls" style="margin-bottom: 1rem;">
+                            <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.5rem;">Enter Amount (₹2,000+)</label>
+                            <input type="number" class="card-amount-input" placeholder="Min ₹2,000" min="2000" value="2000" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.4rem; outline: none; font-weight: 700;">
+                        </div>
+                        <div class="card-footer">
+                            <div class="value-display">
+                                <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">Get Value:</span>
+                                <span class="get-value-badge" style="font-weight: 700; color: var(--success);">₹2,000</span>
+                            </div>
+                            <button class="btn btn-primary btn-sm add-to-cart" data-id="dominos" data-name="Dominos">Buy Now</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why Choose Us -->
+    <section class="section" style="background: white;">
+        <div class="container">
+            <h2 class="section-title text-center" style="margin-bottom: 4rem;">Why Trust GiftMart?</h2>
+            <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+                <div class="feature-item text-center">
+                    <i class="fa-solid fa-bolt" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1.5rem;"></i>
+                    <h3>Instant Delivery</h3>
+                    <p>Digital codes are delivered to your email address within seconds of purchase.</p>
+                </div>
+                <div class="feature-item text-center">
+                    <i class="fa-solid fa-shield-check" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1.5rem;"></i>
+                    <h3>Secure Platform</h3>
+                    <p>We use industry-standard encryption to ensure your data and transactions are safe.</p>
+                </div>
+                <div class="feature-item text-center">
+                    <i class="fa-solid fa-headset" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1.5rem;"></i>
+                    <h3>24/7 Support</h3>
+                    <p>Our dedicated team is always here to help you with any questions or issues.</p>
+                </div>
+                <div class="feature-item text-center">
+                    <i class="fa-solid fa-rotate-left" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1.5rem;"></i>
+                    <h3>Easy Refunds</h3>
+                    <p>Transparent refund policy for failed payments or duplicate transactions. <a href="refund-policy.html" style="color: var(--primary); text-decoration: underline;">Learn More</a></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="#" class="logo footer-logo">
+                        <i class="fa-solid fa-gift"></i> GiftMart
+                    </a>
+                    <p class="footer-text">GiftMart is the leading destination for digital gift cards. We offer a safe and fast way to gift happiness to your loved ones.</p>
+                </div>
+                
+                <div>
+                    <h4 class="footer-title">Marketplace</h4>
+                    <ul class="footer-links">
+                        <li><a href="#" class="footer-link">All Brands</a></li>
+                        <li><a href="#" class="footer-link">Special Offers</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="footer-title">Company</h4>
+                    <ul class="footer-links">
+                        <li><a href="about.html" class="footer-link">About Us</a></li>
+                        <li><a href="contact.html" class="footer-link">Contact</a></li>
+                        <li><a href="refund-policy.html" class="footer-link">Refund Policy</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="footer-title">Legal</h4>
+                    <ul class="footer-links">
+                        <li><a href="terms.html" class="footer-link">Terms of Service</a></li>
+                        <li><a href="privacy.html" class="footer-link">Privacy Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2024 GiftMart. All rights reserved.</p>
+                <div style="display: flex; gap: 2rem;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" height="15">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" height="20">
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="main.js"></script>
+    <script src="firebase-config.js"></script>
+    <script type="module" src="auth-logic.js"></script>
+    <script type="module">
+        window.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('auth-btn');
+            
+            const updateUI = (user) => {
+                if (user) {
+                    btn.innerHTML = `<i class="fa-solid fa-user"></i> ${user.displayName || user.email.split('@')[0]} | Logout`;
+                    btn.href = "#";
+                    btn.onclick = (e) => {
+                        e.preventDefault();
+                        if(confirm('Kya aap logout karna chahte hain?')) {
+                            if (window.authLogic) window.authLogic.logout();
+                            localStorage.removeItem('giftmart_logged_in');
+                            localStorage.removeItem('giftmart_user');
+                            window.location.reload();
+                        }
+                    };
+                    btn.classList.add('btn-outline');
+                    btn.classList.remove('btn-primary');
+                } else {
+                    btn.innerHTML = "Login / Sign Up";
+                    btn.href = "login.html";
+                    btn.onclick = null;
+                    btn.classList.remove('btn-outline');
+                    btn.classList.add('btn-primary');
+                }
+            };
+
+            // Check Firebase Auth and LocalStorage
+            const checkAuth = () => {
+                // 1. Check LocalStorage (for Google GSI login)
+                const localUser = localStorage.getItem('giftmart_user');
+                if (localUser) {
+                    updateUI(JSON.parse(localUser));
+                    return;
+                }
+
+                // 2. Check Firebase Auth
+                if (window.authLogic) {
+                    window.authLogic.onAuthChange(user => {
+                        if (user) {
+                            updateUI({
+                                displayName: user.displayName,
+                                email: user.email
+                            });
+                        } else {
+                            updateUI(null);
+                        }
+                    });
+                } else {
+                    setTimeout(checkAuth, 100);
+                }
+            };
+            
+            checkAuth();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Access | GiftMart</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        .auth-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            background: var(--bg-body);
+        }
+        .auth-container {
+            width: 100%;
+            max-width: 450px;
+            background: white;
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        .auth-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .auth-logo {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            display: block;
+            text-decoration: none;
+        }
+        .auth-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            background: #f1f5f9;
+            padding: 0.4rem;
+            border-radius: 0.8rem;
+        }
+        .auth-tab {
+            flex: 1;
+            padding: 0.75rem;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            border-radius: 0.5rem;
+            transition: all 0.3s;
+            color: var(--text-muted);
+        }
+        .auth-tab.active {
+            background: white;
+            color: var(--primary);
+            box-shadow: var(--shadow-sm);
+        }
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-heading);
+        }
+        .input-wrapper {
+            position: relative;
+        }
+        .input-wrapper i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+        .input-wrapper input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 1px solid var(--border);
+            border-radius: 0.6rem;
+            outline: none;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+        .input-wrapper input:focus {
+            border-color: var(--primary);
+        }
+        .auth-btn {
+            width: 100%;
+            margin-top: 1rem;
+        }
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 1.5rem 0;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--border);
+        }
+        .divider span {
+            padding: 0 1rem;
+        }
+        .google-btn-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .error-box, .success-box {
+            padding: 0.75rem;
+            border-radius: 0.6rem;
+            font-size: 0.875rem;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+        .error-box { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+        .success-box { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+        
+        .loading-spinner {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            border-radius: 1.5rem;
+        }
+        .form-view { display: none; }
+        .form-view.active { display: block; }
+    </style>
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="auth-container">
+            <div class="loading-spinner" id="spinner">
+                <i class="fa-solid fa-circle-notch fa-spin fa-2x" style="color: var(--primary);"></i>
+            </div>
+
+            <div class="auth-header">
+                <a href="index.html" class="auth-logo"><i class="fa-solid fa-gift"></i> GiftMart</a>
+                <h2 id="title">Welcome Back</h2>
+                <p style="color: var(--text-muted); font-size: 0.95rem;" id="subtitle">Enter your details to login.</p>
+            </div>
+
+            <div class="auth-tabs">
+                <div class="auth-tab active" data-tab="login">Login</div>
+                <div class="auth-tab" data-tab="signup">Sign Up</div>
+            </div>
+
+            <div id="error" class="error-box"></div>
+            <div id="success" class="success-box"></div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="form-view active">
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <div class="input-wrapper">
+                        <i class="fa-regular fa-envelope"></i>
+                        <input type="email" id="l-email" placeholder="name@example.com" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" id="l-password" placeholder="••••••••" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary auth-btn">Login</button>
+            </form>
+
+            <!-- Signup Form -->
+            <form id="signup-form" class="form-view">
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <div class="input-wrapper">
+                        <i class="fa-regular fa-envelope"></i>
+                        <input type="email" id="s-email" placeholder="name@example.com" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" id="s-password" placeholder="Min. 6 characters" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Confirm Password</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-shield-check"></i>
+                        <input type="password" id="s-confirm" placeholder="Repeat password" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary auth-btn">Create Account</button>
+            </form>
+
+            <div class="divider"><span>OR</span></div>
+
+            <div class="google-btn-container">
+                <div id="g-login-btn"></div>
+            </div>
+
+            <div style="text-align: center; margin-top: 2rem;">
+                <a href="index.html" style="color: var(--text-muted); text-decoration: none; font-size: 0.875rem;">
+                    <i class="fa-solid fa-arrow-left"></i> Back to Store
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script src="firebase-config.js"></script>
+    <script type="module" src="auth-logic.js"></script>
+
+    <script>
+        // Helper function to parse JWT
+        function parseJwt(token) {
+            var base64Url = token.split('.')[1];
+            var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            var jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        }
+
+        // Handle GSI response
+        function handleGsiResponse(response) {
+            const data = parseJwt(response.credential);
+            
+            // Save to local storage to match Firebase logic
+            localStorage.setItem('giftmart_logged_in', 'true');
+            localStorage.setItem('giftmart_user', JSON.stringify({
+                email: data.email,
+                displayName: data.name,
+                photoURL: data.picture
+            }));
+
+            alert("Google Login Successful! Redirecting...");
+            window.location.href = 'index.html';
+        }
+
+        window.onload = function () {
+            google.accounts.id.initialize({
+                client_id: "972666490197-515l5mtci03bqpiq06u7ohne6g1l5gh2.apps.googleusercontent.com",
+                callback: handleGsiResponse
+            });
+
+            google.accounts.id.renderButton(
+                document.getElementById("g-login-btn"),
+                { theme: "outline", size: "large", shape: "pill", width: 350 }
+            );
+        }
+    </script>
+
+    <script type="module">
+        // Normal Login Logic (Firebase)
+        const tabs = document.querySelectorAll('.auth-tab');
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const errorBox = document.getElementById('error');
+        const successBox = document.getElementById('success');
+        const spinner = document.getElementById('spinner');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const isLogin = tab.dataset.tab === 'login';
+                loginForm.classList.toggle('active', isLogin);
+                signupForm.classList.toggle('active', !isLogin);
+                document.getElementById('title').innerText = isLogin ? 'Welcome Back' : 'Join GiftMart';
+                document.getElementById('subtitle').innerText = isLogin ? 'Enter your details to login.' : 'Create an account to start gifting.';
+                errorBox.style.display = 'none';
+            });
+        });
+
+        const handleAuth = async (action, ...args) => {
+            spinner.style.display = 'flex';
+            errorBox.style.display = 'none';
+            try {
+                const res = await window.authLogic[action](...args);
+                if (res.success) {
+                    successBox.innerText = 'Success! Redirecting...';
+                    successBox.style.display = 'block';
+                    setTimeout(() => window.location.href = 'index.html', 1500);
+                } else {
+                    errorBox.innerText = res.error;
+                    errorBox.style.display = 'block';
+                }
+            } catch (e) {
+                errorBox.innerText = 'An error occurred. Try again.';
+                errorBox.style.display = 'block';
+            } finally {
+                spinner.style.display = 'none';
+            }
+        };
+
+        loginForm.addEventListener('submit', e => {
+            e.preventDefault();
+            handleAuth('login', document.getElementById('l-email').value, document.getElementById('l-password').value);
+        });
+
+        signupForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const pass = document.getElementById('s-password').value;
+            if (pass !== document.getElementById('s-confirm').value) {
+                errorBox.innerText = 'Passwords match nahi kar rahe!';
+                errorBox.style.display = 'block';
+                return;
+            }
+            handleAuth('signUp', document.getElementById('s-email').value, pass);
+        });
+    </script>
+</body>
+</html>
