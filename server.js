@@ -1,140 +1,146 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const crypto = require('crypto');
-const axios = require('axios');
+// Import official BaseUPI SDK
+const BaseUPI = require('baseupi').default || require('baseupi');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ==========================================
-// Middleware Setup
-// ==========================================
-// 1. Enable Explicit CORS
-app.use(cors({
-    origin: '*', // For production, replace '*' with your actual Netlify frontend URL
-    methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-baseupi-signature']
-}));
-
-// Handle preflight OPTIONS requests explicitly
-app.options('*', cors());
-
-// 2. Parse JSON and save raw body for secure webhook verification
-app.use(express.json({
-    verify: (req, res, buf) => {
-        req.rawBody = buf;
-    }
-}));
-
-// ==========================================
-// Environment Variables Check
+// Environment Variables Check & Initialization
 // ==========================================
 const BASEUPI_API_KEY = process.env.BASEUPI_API_KEY;
 const BASEUPI_SECRET_KEY = process.env.BASEUPI_SECRET_KEY;
 
 if (!BASEUPI_API_KEY || !BASEUPI_SECRET_KEY) {
-    console.error("CRITICAL ERROR: BASEUPI_API_KEY or BASEUPI_SECRET_KEY is missing from environment variables.");
-    // We don't exit here so Render doesn't crash repeatedly during setup.
+    console.error("CRITICAL WARNING: BASEUPI_API_KEY or BASEUPI_SECRET_KEY is missing.");
 }
+
+// Initialize the official BaseUPI SDK
+let baseupi;
+try {
+    baseupi = new BaseUPI(BASEUPI_API_KEY);
+} catch (e) {
+    console.error("Failed to initialize BaseUPI SDK. Check if API key is provided.", e.message);
+}
+
+// ==========================================
+// Middleware Setup
+// ==========================================
+// 1. Enable Explicit CORS for all domains
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-baseupi-signature']
+}));
+app.options('*', cors());
 
 // ==========================================
 // API Route: Create Payment
 // ==========================================
-app.post('/api/create-payment', async (req, res) => {
+// Use standard express.json() for this route
+app.post('/api/create-payment', express.json(), async (req, res) => {
     try {
-        const { amount, currency, item_name } = req.body;
+        const { amount, item_name } = req.body;
 
         // Validation
         if (!amount || amount < 2000) {
             return res.status(400).json({ error: 'Minimum amount must be ₹2000' });
         }
 
-        // Production BaseUPI API Call using Axios for better compatibility
-        const response = await axios.post('https://api.baseupi.app/v1/payment/create', {
-            amount: amount,
-            currency: currency || 'INR',
-            description: `Purchase: ${item_name}`
-        }, {
-            headers: {
-                'Authorization': `Bearer ${BASEUPI_API_KEY}`,
-                'Content-Type': 'application/json'
-            }
+        if (!baseupi) {
+            return res.status(500).json({ error: 'BaseUPI SDK is not initialized. Please configure API keys on Render.' });
+        }
+
+        // Convert INR amount to paise (Amount * 100) as required by BaseUPI
+        const amountPaise = parseInt(amount) * 100;
+        
+        // Generate a unique order ID for internal tracking
+        const internalOrderId = `gm_${Date.now()}`;
+
+        console.log(`[BaseUPI] Creating order for ${amount} INR (${amountPaise} paise)...`);
+
+        // Use the official SDK to create the order
+        const order = await baseupi.orders.create({
+            merchant_order_id: internalOrderId,
+            line_items: [
+                {
+                    name: `GiftMart Purchase: ${item_name || 'Gift Card'}`,
+                    amount_paise: amountPaise,
+                    quantity: 1
+                }
+            ]
         });
 
-        const data = response.data;
+        console.log("[BaseUPI] Order created successfully:", order.id || order.merchant_order_id);
 
-        // Return the payment URL/Intent link to the frontend
-        if (data && (data.payment_url || data.intent_url)) {
+        // Return the official checkout URL
+        if (order && order.checkout_url) {
             return res.status(200).json({
                 status: 'success',
-                payment_url: data.payment_url || data.intent_url,
-                order_id: data.order_id
+                payment_url: order.checkout_url,
+                order_id: order.merchant_order_id
             });
         } else {
-            console.error("Unexpected BaseUPI response structure:", data);
+            console.error("Unexpected BaseUPI SDK response structure:", order);
             return res.status(500).json({ error: 'Received invalid response structure from payment gateway.' });
         }
 
     } catch (error) {
-        console.error("Error creating BaseUPI payment:", error.response?.data || error.message);
+        console.error("Error creating BaseUPI payment:", error.message);
         
-        // Return specific gateway error if available
+        // Return specific gateway error if available from SDK
         if (error.response && error.response.data) {
             return res.status(error.response.status || 500).json({ 
-                error: error.response.data.message || error.response.data.error || 'Failed to initialize payment with the BaseUPI gateway.',
-                details: error.response.data
+                error: error.response.data.message || error.response.data.error || 'Failed to initialize payment.',
             });
         }
 
-        return res.status(500).json({ error: 'Payment Service is currently unreachable. Please try again later.' });
+        return res.status(500).json({ error: `Payment Service Error: ${error.message}` });
     }
 });
 
 // ==========================================
 // Webhook Route: Handle Payment Status
 // ==========================================
-app.post('/webhooks/baseupi', (req, res) => {
+// VERY IMPORTANT: BaseUPI Webhook Verification REQUIRES raw body parsing.
+// Do not use express.json() here. Use express.text() exactly as per documentation.
+app.post('/webhooks/baseupi', express.text({ type: '*/*' }), (req, res) => {
     try {
-        // Retrieve signature from headers (BaseUPI standard)
-        const signatureHeader = req.headers['x-baseupi-signature'];
+        const signature = req.headers['x-baseupi-signature'];
         
-        if (!signatureHeader) {
+        if (!signature) {
             console.warn("Webhook received without signature header.");
             return res.status(400).send("Missing Signature");
         }
 
-        // Generate HMAC SHA256 of the raw payload body
-        if (!req.rawBody) {
-            return res.status(400).send("Empty Payload");
+        if (!baseupi) {
+            console.error("BaseUPI SDK not initialized, cannot verify webhook.");
+            return res.status(500).send("SDK Error");
         }
 
-        const hmac = crypto.createHmac('sha256', BASEUPI_SECRET_KEY);
-        hmac.update(req.rawBody);
-        const generatedSignature = hmac.digest('hex');
+        let event;
 
-        // Securely compare signatures
-        if (signatureHeader !== generatedSignature) {
-            console.error("Webhook signature mismatch! Potential spoofing attempt.");
-            return res.status(400).send("Invalid Signature");
+        // Use the OFFICIAL SDK to securely parse and verify the webhook
+        try {
+            event = baseupi.webhooks.constructEvent(req.body, signature, BASEUPI_SECRET_KEY);
+        } catch (err) {
+            console.error('Webhook payload was compromised or invalid:', err.message);
+            return res.status(400).send(`Webhook Error: ${err.message}`);
         }
 
-        // Signature is valid, process Event
-        const event = req.body;
-        
-        if (event.status === 'PAID' || event.status === 'SUCCESS') {
-            console.log(`[Webhook] Payment SUCCESS for Order: ${event.order_id}, Amount: ${event.amount}`);
-            // TODO: Fulfill order in database
-        } else if (event.status === 'FAILED') {
-            console.log(`[Webhook] Payment FAILED for Order: ${event.order_id}`);
-            // TODO: Handle failure logic in database
+        // Webhook is mathematically verified! Process Event.
+        if (event.event === 'payment.completed') {
+            console.log(`[Webhook] Payment SUCCESS! Merchant Order ID: ${event.merchant_order_id}`);
+            // TODO: Fulfill order in database using event.merchant_order_id
         }
 
         // Return 200 OK so gateway knows we received it
-        return res.status(200).send("Webhook Received & Verified");
+        return res.json({ received: true });
 
     } catch (error) {
-        console.error("Webhook Error:", error.message);
+        console.error("Webhook Route Error:", error.message);
         return res.status(500).send("Webhook Server Error");
     }
 });
@@ -145,8 +151,8 @@ app.post('/webhooks/baseupi', (req, res) => {
 app.listen(PORT, () => {
     console.log(`BaseUPI Server is running on port ${PORT}`);
     if (BASEUPI_API_KEY) {
-        console.log(`API Key loaded successfully: ${BASEUPI_API_KEY.substring(0, 15)}...`);
+        console.log(`API Key loaded successfully: ${BASEUPI_API_KEY.substring(0, 10)}...`);
     } else {
-        console.log(`WARNING: Environment variables not detected!`);
+        console.log(`WARNING: Keys not detected! Ensure Render Environment Variables are set.`);
     }
 });
