@@ -14,51 +14,48 @@ app.get("/", (req, res) => {
   res.json({ status: "Server Running ✅" });
 });
 
-// Using Official SDK (DNS issue bypass + better error handling)
-let baseupi;
+let baseupiClient;
+
 try {
-  const { BaseUPI } = require('baseupi');
-  baseupi = new BaseUPI({ secretKey: process.env.BASEUPI_SECRET_KEY });
-  console.log("✅ BaseUPI SDK initialized");
+  const baseupi = require('baseupi');
+  baseupiClient = new baseupi.BaseUPI({
+    secretKey: process.env.BASEUPI_SECRET_KEY
+  });
+  console.log("✅ Official BaseUPI SDK Loaded Successfully");
 } catch (e) {
-  console.log("SDK load failed, using fallback");
+  console.log("❌ SDK Load Failed:", e.message);
 }
 
 app.post("/api/create-payment", async (req, res) => {
   try {
     const { amount } = req.body;
 
-    if (!amount || amount < 2000) {
-      return res.status(400).json({ success: false, error: "Minimum ₹2000 required" });
+    if (!amount || Number(amount) < 2000) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Minimum amount ₹2000 required" 
+      });
     }
 
     const orderId = `ORD${Date.now()}`;
 
     let result;
 
-    if (baseupi) {
-      // Official SDK use kar rahe hain
-      result = await baseupi.orders.create({
+    if (baseupiClient) {
+      // Official SDK
+      result = await baseupiClient.orders.create({
         amountPaise: Number(amount) * 100,
         merchantOrderId: orderId,
       });
     } else {
-      // Fallback (agar SDK fail ho)
-      const axios = require('axios');
-      const response = await axios.post("https://api.baseupi.com/api/v1/orders", {
-        amountPaise: Number(amount) * 100,
-        merchantOrderId: orderId,
-      }, {
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.BASEUPI_SECRET_KEY}`
-        },
-        timeout: 30000
-      });
-      result = response.data;
+      throw new Error("SDK not loaded");
     }
 
-    const paymentUrl = result.checkout_url || result.upi_deeplink || result.upiLink;
+    const paymentUrl = result.checkout_url || result.upi_deeplink || result.paymentLink;
+
+    if (!paymentUrl) {
+      throw new Error("Payment URL not received");
+    }
 
     return res.json({
       success: true,
@@ -67,10 +64,10 @@ app.post("/api/create-payment", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("BaseUPI Error:", error.message);
+    console.error("BaseUPI Error:", error.message || error);
     return res.status(500).json({
       success: false,
-      error: "Payment service mein temporary issue hai. 1-2 minute baad try karo."
+      error: "Payment service temporary down hai. Thodi der baad try karo ya mujhe logs bhej."
     });
   }
 });
