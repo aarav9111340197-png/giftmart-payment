@@ -8,48 +8,46 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Debug logs
+// Debug
 console.log("===== BASEUPI DEBUG =====");
-console.log("API KEY:", process.env.BASEUPI_API_KEY ? "LOADED" : "MISSING");
-console.log("SECRET KEY:", process.env.BASEUPI_SECRET_KEY ? "LOADED" : "MISSING");
+console.log("API KEY loaded:", !!process.env.BASEUPI_API_KEY);
+console.log("SECRET KEY loaded:", !!process.env.BASEUPI_SECRET_KEY);
 console.log("=========================");
 
 // Health check
 app.get("/", (req, res) => {
-  res.json({ status: "Server Running ✅" });
+  res.json({ status: "Server Running ✅", service: "BaseUPI" });
 });
 
-// PAYMENT ROUTE - Updated for your frontend
+// CREATE PAYMENT
 app.post("/api/create-payment", async (req, res) => {
   try {
-    let { amount, currency, item_name } = req.body;
+    const { amount, item_name } = req.body;
 
-    if (!amount) {
+    if (!amount || amount < 2000) {
       return res.status(400).json({ 
         success: false, 
-        error: "Amount is required" 
+        error: "Minimum amount ₹2000 required" 
       });
     }
 
-    // Auto generate Order ID if not provided
-    const orderId = `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    const orderId = `ORD${Date.now()}`;
 
-    console.log(`Creating payment: Amount=₹${amount}, OrderID=${orderId}`);
+    const payload = {
+      amountPaise: Number(amount) * 100,     // Important: Paise mein convert
+      merchantOrderId: orderId,
+      // redirectUrl: "https://yourfrontend.com/success",  // optional
+    };
 
-    // BaseUPI API Call
+    console.log("Sending to BaseUPI:", payload);
+
     const response = await axios.post(
-      "https://api.baseupi.app/payment/create",
-      {
-        amount: Number(amount),
-        orderId: orderId,
-        // currency: currency || "INR",     // agar BaseUPI support kare to uncomment kar sakte hain
-        // description: item_name
-      },
+      "https://api.baseupi.com/api/v1/orders",   // ← Correct URL
+      payload,
       {
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.BASEUPI_API_KEY}`,
-          "x-secret-key": process.env.BASEUPI_SECRET_KEY
+          "Authorization": `Bearer ${process.env.BASEUPI_SECRET_KEY}`   // ← Secret Key use hoti hai
         },
         timeout: 15000
       }
@@ -57,13 +55,13 @@ app.post("/api/create-payment", async (req, res) => {
 
     return res.json({
       success: true,
-      payment_url: response.data.payment_url || response.data.url, // BaseUPI ke hisaab se adjust kar lena
-      orderId: orderId
+      payment_url: response.data.checkout_url || response.data.upi_deeplink,
+      orderId: orderId,
+      raw: response.data
     });
 
   } catch (error) {
     console.error("BaseUPI Error:", error.response?.data || error.message);
-    
     return res.status(500).json({
       success: false,
       error: error.response?.data?.message || error.message || "Payment creation failed"
@@ -71,12 +69,11 @@ app.post("/api/create-payment", async (req, res) => {
   }
 });
 
-// 404 Handler
 app.use((req, res) => {
   res.status(404).json({ success: false, error: "Route not found" });
 });
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`🚀 BaseUPI Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
