@@ -1,6 +1,6 @@
 const express = require("express");
-const cors = require("cors");
 const axios = require("axios");
+const cors = require("cors");
 require("dotenv").config();
 
 const app = express();
@@ -8,57 +8,70 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// DEBUG (safe)
-console.log("BASEUPI API KEY:", process.env.BASEUPI_API_KEY ? "LOADED" : "MISSING");
-console.log("BASEUPI SECRET:", process.env.BASEUPI_SECRET_KEY ? "LOADED" : "MISSING");
+// Debug logs (Render check ke liye)
+console.log("===== BASEUPI DEBUG =====");
+console.log("API KEY:", process.env.BASEUPI_API_KEY ? "LOADED" : "MISSING");
+console.log("SECRET KEY:", process.env.BASEUPI_SECRET_KEY ? "LOADED" : "MISSING");
+console.log("=========================");
 
-// CREATE PAYMENT
-app.post("/create-payment", async (req, res) => {
-    try {
-        const { amount, orderId } = req.body;
+// Health check route
+app.get("/", (req, res) => {
+  res.json({ status: "Server Running" });
+});
 
-        if (!amount) {
-            return res.status(400).json({ error: "Amount required" });
-        }
+// PAYMENT ROUTE
+app.post("/api/create-payment", async (req, res) => {
+  try {
+    const { amount, orderId } = req.body;
 
-        const response = await axios.post(
-            "https://api.baseupi.app/v1/payment/create", // ⚠️ confirm endpoint from docs
-            {
-                amount: amount,
-                order_id: orderId || "ORDER_" + Date.now(),
-                currency: "INR"
-            },
-            {
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${process.env.BASEUPI_API_KEY}`,
-                    "x-secret-key": process.env.BASEUPI_SECRET_KEY
-                }
-            }
-        );
-
-        return res.json({
-            payment_url: response.data.payment_url || response.data.url,
-            success: true
-        });
-
-    } catch (error) {
-        console.error("BaseUPI Error:", error.response?.data || error.message);
-
-        return res.status(500).json({
-            error: error.response?.data || "Payment creation failed"
-        });
+    if (!amount || !orderId) {
+      return res.status(400).json({ error: "Amount and Order ID required" });
     }
+
+    // BaseUPI API request
+    const response = await axios.post(
+      "https://api.baseupi.app/payment/create",
+      {
+        amount,
+        orderId
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.BASEUPI_API_KEY}`,
+          "x-secret-key": process.env.BASEUPI_SECRET_KEY
+        },
+        timeout: 15000
+      }
+    );
+
+    // IMPORTANT: Always return JSON
+    return res.json({
+      success: true,
+      payment: response.data
+    });
+
+  } catch (error) {
+    console.log("BaseUPI Error:", error.response?.data || error.message);
+
+    // IMPORTANT FIX: never return HTML
+    return res.status(500).json({
+      success: false,
+      error: error.response?.data?.error || "Payment creation failed"
+    });
+  }
 });
 
-// WEBHOOK (optional)
-app.post("/webhooks/baseupi", (req, res) => {
-    console.log("Webhook received:", req.body);
-    res.sendStatus(200);
+// 404 handler (IMPORTANT - fixes <!DOCTYPE html> issue)
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: "Route not found"
+  });
 });
 
-// SERVER START
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10000;
+
 app.listen(PORT, () => {
-    console.log("Server running on port", PORT);
+  console.log(`BaseUPI Server running on port ${PORT}`);
 });
