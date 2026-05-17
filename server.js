@@ -19,7 +19,7 @@ app.get("/", (req, res) => {
   res.json({ status: "Server Running ✅", service: "BaseUPI" });
 });
 
-// CREATE PAYMENT
+// CREATE PAYMENT - Final Correct Version
 app.post("/api/create-payment", async (req, res) => {
   try {
     const { amount, item_name } = req.body;
@@ -34,34 +34,37 @@ app.post("/api/create-payment", async (req, res) => {
     const orderId = `ORD${Date.now()}`;
 
     const payload = {
-      amountPaise: Number(amount) * 100,     // Important: Paise mein convert
+      amountPaise: Number(amount) * 100,        // Paise mein convert
       merchantOrderId: orderId,
-      // redirectUrl: "https://yourfrontend.com/success",  // optional
     };
 
-    console.log("Sending to BaseUPI:", payload);
+    console.log("BaseUPI Request:", payload);
 
     const response = await axios.post(
-      "https://api.baseupi.com/api/v1/orders",   // ← Correct URL
+      "https://api.baseupi.com/api/v1/orders",   // Correct Endpoint
       payload,
       {
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.BASEUPI_SECRET_KEY}`   // ← Secret Key use hoti hai
+          "Authorization": `Bearer ${process.env.BASEUPI_SECRET_KEY}`   // Secret Key
         },
-        timeout: 15000
+        timeout: 20000
       }
     );
 
+    const paymentUrl = response.data.checkoutUrl || 
+                       response.data.upiLink || 
+                       response.data.payment_url;
+
     return res.json({
       success: true,
-      payment_url: response.data.checkout_url || response.data.upi_deeplink,
-      orderId: orderId,
-      raw: response.data
+      payment_url: paymentUrl,
+      orderId: orderId
     });
 
   } catch (error) {
-    console.error("BaseUPI Error:", error.response?.data || error.message);
+    console.error("BaseUPI Full Error:", error.response?.data || error.message);
+    
     return res.status(500).json({
       success: false,
       error: error.response?.data?.message || error.message || "Payment creation failed"
@@ -69,11 +72,12 @@ app.post("/api/create-payment", async (req, res) => {
   }
 });
 
+// 404
 app.use((req, res) => {
   res.status(404).json({ success: false, error: "Route not found" });
 });
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 BaseUPI Server running on port ${PORT}`);
 });
