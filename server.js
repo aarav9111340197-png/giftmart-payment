@@ -29,8 +29,8 @@ if (dotenvResult.error) {
     console.log("[Debug] .env file loaded successfully from local directory.");
 }
 
-const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID ? process.env.RAZORPAY_KEY_ID.trim() : null;
-const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET ? process.env.RAZORPAY_KEY_SECRET.trim() : null;
+const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID ? process.env.RAZORPAY_KEY_ID.trim() : 'rzp_test_SqIqdftmnGJN83';
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET ? process.env.RAZORPAY_KEY_SECRET.trim() : 'DnpZz1664ScA4B1yJzENPH7F';
 
 if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
     console.error("CRITICAL WARNING: ENVIRONMENT VARIABLES MISSING");
