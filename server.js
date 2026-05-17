@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+const dotenvResult = require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
@@ -18,19 +19,27 @@ app.use(cors({
 app.use(express.json());
 
 // ==========================================
-// Environment Variables Check
+// Environment Variables Check & Debugging
 // ==========================================
+console.log("==========================================");
+console.log("[Debug] Environment Loading Status:");
+if (dotenvResult.error) {
+    console.log("[Debug] .env file not found or couldn't be loaded (Normal for Render/Production if keys are injected via dashboard).");
+} else {
+    console.log("[Debug] .env file loaded successfully from local directory.");
+}
+
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID ? process.env.RAZORPAY_KEY_ID.trim() : null;
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET ? process.env.RAZORPAY_KEY_SECRET.trim() : null;
 
 if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
-    console.error("==========================================");
     console.error("CRITICAL WARNING: ENVIRONMENT VARIABLES MISSING");
-    console.error("Please add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to your .env or Render dashboard!");
+    console.error(`- RAZORPAY_KEY_ID Missing: ${!RAZORPAY_KEY_ID}`);
+    console.error(`- RAZORPAY_KEY_SECRET Missing: ${!RAZORPAY_KEY_SECRET}`);
+    console.error("Please add these keys to your .env file or Render dashboard!");
     console.error("==========================================");
 } else {
     const maskKey = (key) => key && key.length > 8 ? `${key.substring(0, 8)}...${key.substring(key.length - 4)}` : 'INVALID_LENGTH';
-    console.log("==========================================");
     console.log("[Auth Setup] Razorpay Keys Loaded Successfully!");
     console.log(`[Auth Setup] Masked Key ID: ${maskKey(RAZORPAY_KEY_ID)}`);
     console.log(`[Auth Setup] Masked Secret: ${maskKey(RAZORPAY_KEY_SECRET)}`);
