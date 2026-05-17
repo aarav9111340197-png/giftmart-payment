@@ -26,13 +26,19 @@ app.use(express.json({
 }));
 
 // ==========================================
-// Environment Variables Check
+// Environment Variables Check & Trimming
 // ==========================================
-const BASEUPI_API_KEY = process.env.BASEUPI_API_KEY;
-const BASEUPI_SECRET_KEY = process.env.BASEUPI_SECRET_KEY;
+// Ensure whitespace is trimmed to prevent "Invalid API key" errors
+const BASEUPI_API_KEY = process.env.BASEUPI_API_KEY ? process.env.BASEUPI_API_KEY.trim() : null;
+const BASEUPI_SECRET_KEY = process.env.BASEUPI_SECRET_KEY ? process.env.BASEUPI_SECRET_KEY.trim() : null;
 
 if (!BASEUPI_API_KEY || !BASEUPI_SECRET_KEY) {
     console.error("CRITICAL WARNING: BASEUPI_API_KEY or BASEUPI_SECRET_KEY is missing from environment variables.");
+} else {
+    // Log masked keys for debugging
+    const maskKey = (key) => key ? `${key.substring(0, 10)}...${key.substring(key.length - 4)}` : 'MISSING';
+    console.log(`[Auth Setup] API Key loaded: ${maskKey(BASEUPI_API_KEY)}`);
+    console.log(`[Auth Setup] Secret Key loaded: ${maskKey(BASEUPI_SECRET_KEY)}`);
 }
 
 // ==========================================
@@ -150,9 +156,7 @@ app.post('/webhooks/baseupi', (req, res) => {
 // ==========================================
 app.listen(PORT, () => {
     console.log(`BaseUPI Server is running on port ${PORT}`);
-    if (BASEUPI_API_KEY) {
-        console.log(`API Key loaded successfully: ${BASEUPI_API_KEY.substring(0, 10)}...`);
-    } else {
+    if (!BASEUPI_API_KEY) {
         console.log(`WARNING: Environment variables not detected!`);
     }
 });
