@@ -29,11 +29,11 @@ app.post("/api/create-payment", async (req, res) => {
     const orderId = `ORD${Date.now()}`;
 
     const payload = {
-      amountPaise: Number(amount) * 100,
+      amount_paise: Number(amount) * 100,      // ← Yeh change kiya hai (important)
       merchantOrderId: orderId,
     };
 
-    console.log("Calling BaseUPI:", payload);
+    console.log("BaseUPI Request Payload:", payload);
 
     const response = await axios.post(
       "https://api.baseupi.com/api/v1/orders",
@@ -47,13 +47,15 @@ app.post("/api/create-payment", async (req, res) => {
       }
     );
 
+    console.log("BaseUPI Success Response:", response.data);
+
     const paymentUrl = response.data.checkout_url || 
                        response.data.upi_deeplink || 
                        response.data.paymentLink || 
                        response.data.url;
 
     if (!paymentUrl) {
-      throw new Error("Payment URL not received from BaseUPI");
+      throw new Error("Payment URL not found in BaseUPI response");
     }
 
     return res.json({
@@ -63,10 +65,15 @@ app.post("/api/create-payment", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("BaseUPI Error:", error.message);
+    console.error("🔴 BaseUPI Full Error:", {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data || error.response
+    });
+
     return res.status(500).json({
       success: false,
-      error: "Payment service mein temporary issue hai. Thodi der baad try karo."
+      error: error.response?.data?.message || error.message || "Payment creation failed"
     });
   }
 });
