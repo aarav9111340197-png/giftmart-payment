@@ -10,11 +10,11 @@ const PORT = process.env.PORT || 5000;
 // ==========================================
 // Middleware Setup
 // ==========================================
-// 1. Enable Explicit CORS for all domains
+// 1. Enable Explicit CORS
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-baseupi-signature']
+    allowedHeaders: ['Content-Type', 'x-api-key', 'x-baseupi-signature', 'Authorization']
 }));
 app.options('*', cors());
 
@@ -48,17 +48,24 @@ app.post('/api/create-payment', async (req, res) => {
         }
 
         const internalOrderId = `gm_${Date.now()}`;
-        console.log(`[BaseUPI] Creating order for ${amount} INR...`);
+        const amountPaise = parseInt(amount) * 100;
+        
+        console.log(`[BaseUPI] Creating order for ${amount} INR (${amountPaise} paise)...`);
 
-        // Use native Axios HTTP request to the main BaseUPI domain API endpoint
-        const response = await axios.post('https://baseupi.app/api/v1/payment/create', {
+        // Use native Axios HTTP request to the exact official BaseUPI API endpoint
+        const response = await axios.post('https://baseupi.app/api/v1/orders', {
             merchant_order_id: internalOrderId,
-            amount: amount, // Assuming direct INR value or string based on original payload
-            currency: 'INR',
-            description: `GiftMart Purchase: ${item_name || 'Gift Card'}`
+            line_items: [
+                {
+                    name: `GiftMart Purchase: ${item_name || 'Gift Card'}`,
+                    amount_paise: amountPaise,
+                    quantity: 1
+                }
+            ]
         }, {
             headers: {
-                'Authorization': `Bearer ${BASEUPI_API_KEY}`,
+                'x-api-key': BASEUPI_API_KEY, // BaseUPI expects x-api-key, NOT Bearer
+                'Accept': 'application/json',
                 'Content-Type': 'application/json'
             }
         });
@@ -66,12 +73,12 @@ app.post('/api/create-payment', async (req, res) => {
         const data = response.data;
         console.log("[BaseUPI] API Response:", data);
 
-        // Return the payment URL/Intent link to the frontend
-        if (data && (data.payment_url || data.checkout_url || data.intent_url)) {
+        // BaseUPI Official SDK returns 'checkout_url'
+        if (data && data.checkout_url) {
             return res.status(200).json({
                 status: 'success',
-                payment_url: data.payment_url || data.checkout_url || data.intent_url,
-                order_id: data.order_id || data.merchant_order_id || internalOrderId
+                payment_url: data.checkout_url,
+                order_id: data.id || data.merchant_order_id || internalOrderId
             });
         } else {
             console.error("Unexpected BaseUPI response structure:", data);
@@ -81,7 +88,6 @@ app.post('/api/create-payment', async (req, res) => {
     } catch (error) {
         console.error("Error creating BaseUPI payment:", error.response?.data || error.message);
         
-        // Return specific gateway error if available
         if (error.response && error.response.data) {
             return res.status(error.response.status || 500).json({ 
                 error: error.response.data.message || error.response.data.error || 'Failed to initialize payment with the BaseUPI gateway.',
@@ -98,7 +104,6 @@ app.post('/api/create-payment', async (req, res) => {
 // ==========================================
 app.post('/webhooks/baseupi', (req, res) => {
     try {
-        // Retrieve signature from headers (BaseUPI standard)
         const signatureHeader = req.headers['x-baseupi-signature'];
         
         if (!signatureHeader) {
@@ -106,17 +111,17 @@ app.post('/webhooks/baseupi', (req, res) => {
             return res.status(400).send("Missing Signature");
         }
 
-        // Generate HMAC SHA256 of the raw payload body
         if (!req.rawBody) {
             return res.status(400).send("Empty Payload");
         }
 
-        const hmac = crypto.createHmac('sha256', BASEUPI_SECRET_KEY);
-        hmac.update(req.rawBody);
-        const generatedSignature = hmac.digest('hex');
+        // Generate HMAC SHA256 exactly as the official SDK does
+        const expectedSignature = crypto.createHmac('sha256', BASEUPI_SECRET_KEY).update(req.rawBody).digest('hex');
+        
+        const signatureBuffer = Buffer.from(signatureHeader, 'hex');
+        const expectedBuffer = Buffer.from(expectedSignature, 'hex');
 
-        // Securely compare signatures
-        if (signatureHeader !== generatedSignature) {
+        if (signatureBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) {
             console.error("Webhook signature mismatch! Potential spoofing attempt.");
             return res.status(400).send("Invalid Signature");
         }
@@ -124,15 +129,14 @@ app.post('/webhooks/baseupi', (req, res) => {
         // Signature is valid, process Event
         const event = req.body;
         
-        if (event.status === 'PAID' || event.status === 'SUCCESS' || event.event === 'payment.completed') {
+        if (event.event === 'payment.completed' || event.status === 'COMPLETED' || event.status === 'PAID') {
             console.log(`[Webhook] Payment SUCCESS for Order: ${event.order_id || event.merchant_order_id}`);
             // TODO: Fulfill order in database
         } else if (event.status === 'FAILED') {
             console.log(`[Webhook] Payment FAILED for Order: ${event.order_id || event.merchant_order_id}`);
-            // TODO: Handle failure logic in database
+            // TODO: Handle failure logic
         }
 
-        // Return 200 OK so gateway knows we received it
         return res.status(200).send("Webhook Received & Verified");
 
     } catch (error) {
@@ -147,7 +151,7 @@ app.post('/webhooks/baseupi', (req, res) => {
 app.listen(PORT, () => {
     console.log(`BaseUPI Server is running on port ${PORT}`);
     if (BASEUPI_API_KEY) {
-        console.log(`API Key loaded successfully: ${BASEUPI_API_KEY.substring(0, 15)}...`);
+        console.log(`API Key loaded successfully: ${BASEUPI_API_KEY.substring(0, 10)}...`);
     } else {
         console.log(`WARNING: Environment variables not detected!`);
     }
