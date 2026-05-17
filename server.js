@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
+const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -34,8 +35,7 @@ const BASEUPI_SECRET_KEY = process.env.BASEUPI_SECRET_KEY;
 
 if (!BASEUPI_API_KEY || !BASEUPI_SECRET_KEY) {
     console.error("CRITICAL ERROR: BASEUPI_API_KEY or BASEUPI_SECRET_KEY is missing from environment variables.");
-    // We don't exit here so Render doesn't crash repeatedly during setup, 
-    // but the endpoints will fail until keys are added to Render dashboard.
+    // We don't exit here so Render doesn't crash repeatedly during setup.
 }
 
 // ==========================================
@@ -50,33 +50,22 @@ app.post('/api/create-payment', async (req, res) => {
             return res.status(400).json({ error: 'Minimum amount must be ₹2000' });
         }
 
-        // Production BaseUPI API Call
-        const response = await fetch('https://api.baseupi.app/v1/payment/create', {
-            method: 'POST',
+        // Production BaseUPI API Call using Axios for better compatibility
+        const response = await axios.post('https://api.baseupi.app/v1/payment/create', {
+            amount: amount,
+            currency: currency || 'INR',
+            description: `Purchase: ${item_name}`
+        }, {
             headers: {
                 'Authorization': `Bearer ${BASEUPI_API_KEY}`,
                 'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                amount: amount,
-                currency: currency || 'INR',
-                description: `Purchase: ${item_name}`
-            })
+            }
         });
 
-        // Parse BaseUPI response safely
-        const data = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-            console.error("BaseUPI Gateway Error:", data);
-            return res.status(response.status).json({ 
-                error: data.message || data.error || 'Failed to initialize payment with the BaseUPI gateway.',
-                details: data
-            });
-        }
+        const data = response.data;
 
         // Return the payment URL/Intent link to the frontend
-        if (data.payment_url || data.intent_url) {
+        if (data && (data.payment_url || data.intent_url)) {
             return res.status(200).json({
                 status: 'success',
                 payment_url: data.payment_url || data.intent_url,
@@ -84,11 +73,20 @@ app.post('/api/create-payment', async (req, res) => {
             });
         } else {
             console.error("Unexpected BaseUPI response structure:", data);
-            return res.status(500).json({ error: 'Received invalid response from payment gateway.' });
+            return res.status(500).json({ error: 'Received invalid response structure from payment gateway.' });
         }
 
     } catch (error) {
-        console.error("Error creating BaseUPI payment:", error);
+        console.error("Error creating BaseUPI payment:", error.response?.data || error.message);
+        
+        // Return specific gateway error if available
+        if (error.response && error.response.data) {
+            return res.status(error.response.status || 500).json({ 
+                error: error.response.data.message || error.response.data.error || 'Failed to initialize payment with the BaseUPI gateway.',
+                details: error.response.data
+            });
+        }
+
         return res.status(500).json({ error: 'Payment Service is currently unreachable. Please try again later.' });
     }
 });
