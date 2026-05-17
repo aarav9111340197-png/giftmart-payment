@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const axios = require("axios");
 require("dotenv").config();
 
 const app = express();
@@ -14,18 +15,6 @@ app.get("/", (req, res) => {
   res.json({ status: "Server Running ✅" });
 });
 
-let baseupiClient;
-
-try {
-  const BaseUPI = require('baseupi').default || require('baseupi');
-  baseupiClient = new BaseUPI({
-    secretKey: process.env.BASEUPI_SECRET_KEY
-  });
-  console.log("✅ BaseUPI SDK Loaded Successfully");
-} catch (e) {
-  console.log("❌ SDK Load Failed:", e.message);
-}
-
 app.post("/api/create-payment", async (req, res) => {
   try {
     const { amount } = req.body;
@@ -39,21 +28,32 @@ app.post("/api/create-payment", async (req, res) => {
 
     const orderId = `ORD${Date.now()}`;
 
-    let result;
+    const payload = {
+      amountPaise: Number(amount) * 100,
+      merchantOrderId: orderId,
+    };
 
-    if (baseupiClient) {
-      result = await baseupiClient.orders.create({
-        amountPaise: Number(amount) * 100,
-        merchantOrderId: orderId,
-      });
-    } else {
-      throw new Error("SDK not loaded");
-    }
+    console.log("Calling BaseUPI:", payload);
 
-    const paymentUrl = result.checkout_url || result.upi_deeplink || result.paymentLink || result.url;
+    const response = await axios.post(
+      "https://api.baseupi.com/api/v1/orders",
+      payload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.BASEUPI_SECRET_KEY}`
+        },
+        timeout: 30000
+      }
+    );
+
+    const paymentUrl = response.data.checkout_url || 
+                       response.data.upi_deeplink || 
+                       response.data.paymentLink || 
+                       response.data.url;
 
     if (!paymentUrl) {
-      throw new Error("No payment URL received");
+      throw new Error("Payment URL not received from BaseUPI");
     }
 
     return res.json({
@@ -63,10 +63,10 @@ app.post("/api/create-payment", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("BaseUPI Error:", error.message || error);
+    console.error("BaseUPI Error:", error.message);
     return res.status(500).json({
       success: false,
-      error: "Payment creation failed. Please try again later."
+      error: "Payment service mein temporary issue hai. Thodi der baad try karo."
     });
   }
 });

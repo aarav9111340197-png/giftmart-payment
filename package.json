@@ -1,7 +1,7 @@
 {
   "name": "giftmart-payment",
   "version": "1.0.0",
-  "description": "BaseUPI Backend",
+  "description": "BaseUPI Payment Backend",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -10,6 +10,6 @@
     "express": "^4.19.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "@snc0x/baseupi": "latest"
+    "axios": "^1.7.2"
   }
 }
