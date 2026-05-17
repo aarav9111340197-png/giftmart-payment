@@ -1,8 +1,9 @@
-require('dotenv').config();
+const path = require('path');
+const dotenvResult = require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
-const axios = require('axios');
+const Razorpay = require('razorpay');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -10,134 +11,131 @@ const PORT = process.env.PORT || 5000;
 // ==========================================
 // Middleware Setup
 // ==========================================
-// 1. Enable Explicit CORS for all domains
 app.use(cors({
     origin: '*',
-    methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-baseupi-signature']
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type']
 }));
-app.options('*', cors());
+app.use(express.json());
 
-// 2. Parse JSON and save raw body for secure webhook verification
-app.use(express.json({
-    verify: (req, res, buf) => {
-        req.rawBody = buf;
+// ==========================================
+// Environment Variables Check & Debugging
+// ==========================================
+console.log("==========================================");
+console.log("[Debug] Environment Loading Status:");
+if (dotenvResult.error) {
+    console.log("[Debug] .env file not found or couldn't be loaded (Normal for Render/Production if keys are injected via dashboard).");
+} else {
+    console.log("[Debug] .env file loaded successfully from local directory.");
+}
+
+const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID ? process.env.RAZORPAY_KEY_ID.trim() : 'rzp_test_SqIqdftmnGJN83';
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET ? process.env.RAZORPAY_KEY_SECRET.trim() : 'DnpZz1664ScA4B1yJzENPH7F';
+
+if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
+    console.error("CRITICAL WARNING: ENVIRONMENT VARIABLES MISSING");
+    console.error(`- RAZORPAY_KEY_ID Missing: ${!RAZORPAY_KEY_ID}`);
+    console.error(`- RAZORPAY_KEY_SECRET Missing: ${!RAZORPAY_KEY_SECRET}`);
+    console.error("Please add these keys to your .env file or Render dashboard!");
+    console.error("==========================================");
+} else {
+    const maskKey = (key) => key && key.length > 8 ? `${key.substring(0, 8)}...${key.substring(key.length - 4)}` : 'INVALID_LENGTH';
+    console.log("[Auth Setup] Razorpay Keys Loaded Successfully!");
+    console.log(`[Auth Setup] Masked Key ID: ${maskKey(RAZORPAY_KEY_ID)}`);
+    console.log(`[Auth Setup] Masked Secret: ${maskKey(RAZORPAY_KEY_SECRET)}`);
+    console.log("==========================================");
+}
+
+// Initialize Razorpay SDK
+let razorpayInstance;
+try {
+    if (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET) {
+        razorpayInstance = new Razorpay({
+            key_id: RAZORPAY_KEY_ID,
+            key_secret: RAZORPAY_KEY_SECRET
+        });
     }
-}));
-
-// ==========================================
-// Environment Variables Check
-// ==========================================
-const BASEUPI_API_KEY = process.env.BASEUPI_API_KEY;
-const BASEUPI_SECRET_KEY = process.env.BASEUPI_SECRET_KEY;
-
-if (!BASEUPI_API_KEY || !BASEUPI_SECRET_KEY) {
-    console.error("CRITICAL WARNING: BASEUPI_API_KEY or BASEUPI_SECRET_KEY is missing from environment variables.");
+} catch (error) {
+    console.error("Failed to initialize Razorpay SDK:", error);
 }
 
 // ==========================================
-// API Route: Create Payment
+// API Route: Create Razorpay Order
 // ==========================================
-app.post('/api/create-payment', async (req, res) => {
+app.post('/api/create-order', async (req, res) => {
     try {
         const { amount, item_name } = req.body;
 
-        // Validation
         if (!amount || amount < 2000) {
             return res.status(400).json({ error: 'Minimum amount must be ₹2000' });
         }
 
-        const internalOrderId = `gm_${Date.now()}`;
-        console.log(`[BaseUPI] Creating order for ${amount} INR...`);
+        if (!razorpayInstance) {
+            return res.status(500).json({ error: 'Server configuration error. Razorpay SDK not initialized.' });
+        }
 
-        // Use native Axios HTTP request to the main BaseUPI domain API endpoint
-        const response = await axios.post('https://baseupi.app/api/v1/payment/create', {
-            merchant_order_id: internalOrderId,
-            amount: amount, // Assuming direct INR value or string based on original payload
+        const amountPaise = parseInt(amount) * 100;
+        const receiptId = `receipt_${Date.now()}`;
+
+        console.log(`[Razorpay] Creating order for ${amount} INR (${amountPaise} paise)...`);
+
+        const options = {
+            amount: amountPaise,
             currency: 'INR',
-            description: `GiftMart Purchase: ${item_name || 'Gift Card'}`
-        }, {
-            headers: {
-                'Authorization': `Bearer ${BASEUPI_API_KEY}`,
-                'Content-Type': 'application/json'
+            receipt: receiptId,
+            notes: {
+                item: item_name || 'Gift Card'
             }
+        };
+
+        const order = await razorpayInstance.orders.create(options);
+        
+        console.log("[Razorpay] Order created successfully:", order.id);
+
+        return res.status(200).json({
+            status: 'success',
+            order_id: order.id,
+            amount: order.amount,
+            currency: order.currency
         });
 
-        const data = response.data;
-        console.log("[BaseUPI] API Response:", data);
-
-        // Return the payment URL/Intent link to the frontend
-        if (data && (data.payment_url || data.checkout_url || data.intent_url)) {
-            return res.status(200).json({
-                status: 'success',
-                payment_url: data.payment_url || data.checkout_url || data.intent_url,
-                order_id: data.order_id || data.merchant_order_id || internalOrderId
-            });
-        } else {
-            console.error("Unexpected BaseUPI response structure:", data);
-            return res.status(500).json({ error: 'Received invalid response structure from payment gateway.' });
-        }
-
     } catch (error) {
-        console.error("Error creating BaseUPI payment:", error.response?.data || error.message);
-        
-        // Return specific gateway error if available
-        if (error.response && error.response.data) {
-            return res.status(error.response.status || 500).json({ 
-                error: error.response.data.message || error.response.data.error || 'Failed to initialize payment with the BaseUPI gateway.',
-                details: error.response.data
-            });
-        }
-
-        return res.status(500).json({ error: 'Payment Service is currently unreachable. Please try again later.' });
+        console.error("Error creating Razorpay order:", error);
+        return res.status(500).json({ error: 'Failed to create payment order. Please try again.' });
     }
 });
 
 // ==========================================
-// Webhook Route: Handle Payment Status
+// API Route: Verify Payment Signature
 // ==========================================
-app.post('/webhooks/baseupi', (req, res) => {
+app.post('/api/verify-payment', (req, res) => {
     try {
-        // Retrieve signature from headers (BaseUPI standard)
-        const signatureHeader = req.headers['x-baseupi-signature'];
-        
-        if (!signatureHeader) {
-            console.warn("Webhook received without signature header.");
-            return res.status(400).send("Missing Signature");
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+            return res.status(400).json({ error: 'Missing required payment details for verification' });
         }
 
-        // Generate HMAC SHA256 of the raw payload body
-        if (!req.rawBody) {
-            return res.status(400).send("Empty Payload");
+        // Generate the expected signature using the Secret Key
+        const body = razorpay_order_id + "|" + razorpay_payment_id;
+        const expectedSignature = crypto
+            .createHmac('sha256', RAZORPAY_KEY_SECRET)
+            .update(body.toString())
+            .digest('hex');
+
+        // Compare signatures securely
+        if (expectedSignature === razorpay_signature) {
+            console.log(`[Verification] Payment SUCCESS! Order ID: ${razorpay_order_id}, Payment ID: ${razorpay_payment_id}`);
+            // Note: Fulfill order in database here
+            return res.status(200).json({ status: 'success', message: 'Payment verified successfully' });
+        } else {
+            console.error(`[Verification] FAILED! Signature mismatch for Order ID: ${razorpay_order_id}`);
+            return res.status(400).json({ status: 'failure', error: 'Payment signature verification failed' });
         }
-
-        const hmac = crypto.createHmac('sha256', BASEUPI_SECRET_KEY);
-        hmac.update(req.rawBody);
-        const generatedSignature = hmac.digest('hex');
-
-        // Securely compare signatures
-        if (signatureHeader !== generatedSignature) {
-            console.error("Webhook signature mismatch! Potential spoofing attempt.");
-            return res.status(400).send("Invalid Signature");
-        }
-
-        // Signature is valid, process Event
-        const event = req.body;
-        
-        if (event.status === 'PAID' || event.status === 'SUCCESS' || event.event === 'payment.completed') {
-            console.log(`[Webhook] Payment SUCCESS for Order: ${event.order_id || event.merchant_order_id}`);
-            // TODO: Fulfill order in database
-        } else if (event.status === 'FAILED') {
-            console.log(`[Webhook] Payment FAILED for Order: ${event.order_id || event.merchant_order_id}`);
-            // TODO: Handle failure logic in database
-        }
-
-        // Return 200 OK so gateway knows we received it
-        return res.status(200).send("Webhook Received & Verified");
 
     } catch (error) {
-        console.error("Webhook Error:", error.message);
-        return res.status(500).send("Webhook Server Error");
+        console.error("Payment verification error:", error);
+        return res.status(500).json({ error: 'Internal server error during verification' });
     }
 });
 
@@ -145,10 +143,5 @@ app.post('/webhooks/baseupi', (req, res) => {
 // Start Server
 // ==========================================
 app.listen(PORT, () => {
-    console.log(`BaseUPI Server is running on port ${PORT}`);
-    if (BASEUPI_API_KEY) {
-        console.log(`API Key loaded successfully: ${BASEUPI_API_KEY.substring(0, 15)}...`);
-    } else {
-        console.log(`WARNING: Environment variables not detected!`);
-    }
+    console.log(`Razorpay Server is running on port ${PORT}`);
 });
