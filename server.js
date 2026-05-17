@@ -1,6 +1,8 @@
-const express = require("express");
-const cors = require("cors");
-require("dotenv").config();
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 app.use(cors());
@@ -17,11 +19,11 @@ app.get("/", (req, res) => {
 let baseupiClient;
 
 try {
-  const baseupi = require('baseupi');
-  baseupiClient = new baseupi.BaseUPI({
+  const baseupi = await import('baseupi');
+  baseupiClient = new baseupi.default.BaseUPI({
     secretKey: process.env.BASEUPI_SECRET_KEY
   });
-  console.log("✅ Official BaseUPI SDK Loaded Successfully");
+  console.log("✅ BaseUPI SDK Loaded Successfully");
 } catch (e) {
   console.log("❌ SDK Load Failed:", e.message);
 }
@@ -42,19 +44,18 @@ app.post("/api/create-payment", async (req, res) => {
     let result;
 
     if (baseupiClient) {
-      // Official SDK
       result = await baseupiClient.orders.create({
         amountPaise: Number(amount) * 100,
         merchantOrderId: orderId,
       });
     } else {
-      throw new Error("SDK not loaded");
+      throw new Error("BaseUPI SDK not loaded");
     }
 
-    const paymentUrl = result.checkout_url || result.upi_deeplink || result.paymentLink;
+    const paymentUrl = result.checkout_url || result.upi_deeplink || result.paymentLink || result.url;
 
     if (!paymentUrl) {
-      throw new Error("Payment URL not received");
+      throw new Error("Payment URL not received from BaseUPI");
     }
 
     return res.json({
@@ -67,7 +68,7 @@ app.post("/api/create-payment", async (req, res) => {
     console.error("BaseUPI Error:", error.message || error);
     return res.status(500).json({
       success: false,
-      error: "Payment service temporary down hai. Thodi der baad try karo ya mujhe logs bhej."
+      error: error.message || "Payment creation failed. Please try again."
     });
   }
 });
