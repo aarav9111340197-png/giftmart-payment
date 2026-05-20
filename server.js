@@ -46,7 +46,7 @@ function getSession(req) {
 const MERCHANT_ID = process.env.WATCHPAYS_MERCHANT_ID || '100555268';
 const PAYIN_KEY = process.env.WATCHPAYS_PAYIN_KEY || 'fce7570887b30ff4cef9486029d61088';
 const PAYOUT_KEY = process.env.WATCHPAYS_PAYOUT_KEY || '7DB1C23BB59C7065D45D253AD67D9B4B';
-const PAYIN_URL = 'https://api.watchpays.com/payin/payment.php';
+const PAYIN_URL = 'https://api.watchpays.com/v1/create';
 const PAYOUT_URL = 'https://api.watchpays.com/payout/payment.php';
 
 // Files
@@ -178,9 +178,9 @@ app.post('/create-payment', async (req, res) => {
     };
     
     try {
-        const response = await axios.post(PAYIN_URL, new URLSearchParams(payload).toString(), {
+        const response = await axios.post(PAYIN_URL, payload, {
             timeout: 10000,
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            headers: { 'Content-Type': 'application/json' }
         });
         
         logApiCall(PAYIN_URL, payload, response.data, 'SUCCESS');
