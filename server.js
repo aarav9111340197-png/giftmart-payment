@@ -166,6 +166,7 @@ app.post('/create-payment', async (req, res) => {
     
     const payload = {
         merchant_id: MERCHANT_ID,
+        api_key: PAYIN_KEY,
         order_id: orderId,
         amount,
         name: customerName,
@@ -176,6 +177,16 @@ app.post('/create-payment', async (req, res) => {
         fail_url,
         signature
     };
+
+    // Safe Debug Logs
+    const maskedKey = PAYIN_KEY ? `${PAYIN_KEY.substring(0, 4)}...${PAYIN_KEY.substring(PAYIN_KEY.length - 4)}` : 'MISSING';
+    console.log(`[Watchpays Debug] merchant_id: ${MERCHANT_ID}`);
+    console.log(`[Watchpays Debug] PAYIN_KEY exists: ${!!PAYIN_KEY}`);
+    console.log(`[Watchpays Debug] PAYIN_KEY value: ${maskedKey}`);
+    
+    const safePayloadLog = { ...payload, api_key: maskedKey };
+    console.log(`[Watchpays Debug] Request body: ${JSON.stringify(safePayloadLog)}`);
+    writeLog(`[Watchpays Debug] merchant_id: ${MERCHANT_ID} | PAYIN_KEY exists: ${!!PAYIN_KEY} | key: ${maskedKey}`, 'DEBUG');
     
     try {
         const response = await axios.post(PAYIN_URL, payload, {
@@ -189,13 +200,15 @@ app.post('/create-payment', async (req, res) => {
             return res.json({ status: "SUCCESS", payment_url: response.data.payment_url });
         } else {
             const errorMsg = response.data && response.data.message ? response.data.message : 'Watchpays gateway response missing payment_url.';
-            writeLog(`Watchpays API Error: ${errorMsg}`, 'ERROR');
+            writeLog(`Watchpays API Error: ${errorMsg} | Full response: ${JSON.stringify(response.data)}`, 'ERROR');
             return res.status(400).json({ error: errorMsg, response: response.data });
         }
     } catch (err) {
-        const errMsg = err.response && err.response.data ? JSON.stringify(err.response.data) : err.message;
+        const errorDetails = err.response && err.response.data ? err.response.data : null;
+        const errMsg = errorDetails ? JSON.stringify(errorDetails) : err.message;
         logApiCall(PAYIN_URL, payload, errMsg, 'FAILED');
-        return res.status(500).json({ error: `Failed to contact Watchpays gateway: ${err.message}` });
+        writeLog(`Watchpays API Request Failed: ${err.message} | Details: ${errMsg}`, 'ERROR');
+        return res.status(500).json({ error: `Failed to contact Watchpays gateway: ${err.message}`, details: errorDetails });
     }
 });
 
