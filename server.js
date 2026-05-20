@@ -17,6 +17,17 @@ app.use(cors({
 }));
 app.options('*', cors());
 
+// Manual CORS middleware fallback to ensure headers are sent for preflight and options
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
 // Parse urlencoded (form data) and JSON payloads
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -35,8 +46,8 @@ function getSession(req) {
 const MERCHANT_ID = process.env.WATCHPAYS_MERCHANT_ID || '100555268';
 const PAYIN_KEY = process.env.WATCHPAYS_PAYIN_KEY || 'fce7570887b30ff4cef9486029d61088';
 const PAYOUT_KEY = process.env.WATCHPAYS_PAYOUT_KEY || '7DB1C23BB59C7065D45D253AD67D9B4B';
-const PAYIN_URL = 'http://api.watchpays.com/payin/payment.php';
-const PAYOUT_URL = 'http://api.watchpays.com/payout/payment.php';
+const PAYIN_URL = 'https://api.watchpays.com/payin/payment.php';
+const PAYOUT_URL = 'https://api.watchpays.com/payout/payment.php';
 
 // Files
 const TRANSACTIONS_FILE = path.join(__dirname, 'transactions.json');
@@ -168,7 +179,7 @@ app.post('/create-payment', async (req, res) => {
     
     try {
         const response = await axios.post(PAYIN_URL, new URLSearchParams(payload).toString(), {
-            timeout: 7000,
+            timeout: 10000,
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
         
@@ -177,15 +188,14 @@ app.post('/create-payment', async (req, res) => {
         if (response.data && response.data.payment_url) {
             return res.json({ status: "SUCCESS", payment_url: response.data.payment_url });
         } else {
-            const session = getSession(req);
-            session.sandbox_payload = payload;
-            return res.json({ status: "SUCCESS", payment_url: `${appUrl}/payin_sandbox.php` });
+            const errorMsg = response.data && response.data.message ? response.data.message : 'Watchpays gateway response missing payment_url.';
+            writeLog(`Watchpays API Error: ${errorMsg}`, 'ERROR');
+            return res.status(400).json({ error: errorMsg, response: response.data });
         }
     } catch (err) {
-        logApiCall(PAYIN_URL, payload, err.message, 'FAILED');
-        const session = getSession(req);
-        session.sandbox_payload = payload;
-        return res.json({ status: "SUCCESS", payment_url: `${appUrl}/payin_sandbox.php` });
+        const errMsg = err.response && err.response.data ? JSON.stringify(err.response.data) : err.message;
+        logApiCall(PAYIN_URL, payload, errMsg, 'FAILED');
+        return res.status(500).json({ error: `Failed to contact Watchpays gateway: ${err.message}` });
     }
 });
 
@@ -235,7 +245,7 @@ app.post('/create-payout', async (req, res) => {
     
     try {
         const response = await axios.post(PAYOUT_URL, new URLSearchParams(payload).toString(), {
-            timeout: 7000,
+            timeout: 10000,
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
         
@@ -244,23 +254,14 @@ app.post('/create-payout', async (req, res) => {
         if (response.data && response.data.status === 'SUCCESS') {
             return res.json({ status: "SUCCESS", message: "Payout initiated successfully. Transferred to bank." });
         } else {
-            const session = getSession(req);
-            session.payout_sandbox_payload = payload;
-            return res.json({
-                status: 'PENDING',
-                message: 'Payout request recorded. Redirecting to simulator...',
-                redirect_sandbox: `${appUrl}/payout_sandbox.php`
-            });
+            const errorMsg = response.data && response.data.message ? response.data.message : 'Watchpays payout request failed.';
+            writeLog(`Watchpays Payout API Error: ${errorMsg}`, 'ERROR');
+            return res.status(400).json({ error: errorMsg, response: response.data });
         }
     } catch (err) {
-        logApiCall(PAYOUT_URL, payload, err.message, 'FAILED');
-        const session = getSession(req);
-        session.payout_sandbox_payload = payload;
-        return res.json({
-            status: 'PENDING',
-            message: 'Gateway offline. Redirecting to simulator...',
-            redirect_sandbox: `${appUrl}/payout_sandbox.php`
-        });
+        const errMsg = err.response && err.response.data ? JSON.stringify(err.response.data) : err.message;
+        logApiCall(PAYOUT_URL, payload, errMsg, 'FAILED');
+        return res.status(500).json({ error: `Failed to contact Watchpays payout gateway: ${err.message}` });
     }
 });
 
