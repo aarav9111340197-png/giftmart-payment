@@ -148,13 +148,46 @@ app.post('/create-payment', async (req, res) => {
     const callback_url = `${appUrl}/callback.php`;
     const return_url = `${appUrl}/success.php?order_id=${orderId}`;
     const fail_url = `${appUrl}/failed.php?order_id=${orderId}`;
+    const merchant_order_no = orderId;
     
-    const raw_sig_str = amount + callback_url + MERCHANT_ID + orderId + PAYIN_KEY;
-    const signature = md5(raw_sig_str);
+    // Format amount to exactly 2 decimal places (e.g., "1000.00")
+    const formattedAmount = parseFloat(amount).toFixed(2);
+    
+    // Create params object for signing
+    const signParams = {
+        merchant_id: MERCHANT_ID,
+        amount: formattedAmount,
+        merchant_order_no: merchant_order_no,
+        callback_url: callback_url
+    };
+    
+    // Remove empty/null/undefined values
+    const cleanParams = {};
+    Object.keys(signParams).forEach(key => {
+        if (signParams[key] !== null && signParams[key] !== undefined && signParams[key] !== '') {
+            cleanParams[key] = signParams[key].toString();
+        }
+    });
+    
+    // Sort parameters alphabetically by key
+    const sortedKeys = Object.keys(cleanParams).sort();
+    
+    // Build signStr: key=value&key=value...&key=PAYIN_API_KEY
+    let signStr = sortedKeys.map(k => `${k}=${cleanParams[k]}`).join('&');
+    signStr += `&key=${PAYIN_KEY}`;
+    
+    // Generate signature
+    const signature = md5(signStr);
+    
+    // Safe Debug Logs: log signStr and payload without exposing full key
+    const maskedKey = PAYIN_KEY ? `${PAYIN_KEY.substring(0, 4)}...${PAYIN_KEY.substring(PAYIN_KEY.length - 4)}` : 'MISSING';
+    const safeSignStrLog = signStr.replace(PAYIN_KEY, maskedKey);
+    console.log(`[Watchpays SignStr]: ${safeSignStrLog}`);
+    console.log(`[Watchpays Debug] merchant_id: ${MERCHANT_ID}`);
     
     const txnData = {
         type: 'PAYIN',
-        amount: parseFloat(amount),
+        amount: parseFloat(formattedAmount),
         customer_name: customerName,
         customer_email: customerEmail,
         customer_phone: customerPhone,
@@ -166,9 +199,8 @@ app.post('/create-payment', async (req, res) => {
     
     const payload = {
         merchant_id: MERCHANT_ID,
-        api_key: PAYIN_KEY,
-        order_id: orderId,
-        amount,
+        merchant_order_no: merchant_order_no,
+        amount: formattedAmount,
         name: customerName,
         email: customerEmail,
         phone: customerPhone,
@@ -177,16 +209,9 @@ app.post('/create-payment', async (req, res) => {
         fail_url,
         signature
     };
-
-    // Safe Debug Logs
-    const maskedKey = PAYIN_KEY ? `${PAYIN_KEY.substring(0, 4)}...${PAYIN_KEY.substring(PAYIN_KEY.length - 4)}` : 'MISSING';
-    console.log(`[Watchpays Debug] merchant_id: ${MERCHANT_ID}`);
-    console.log(`[Watchpays Debug] PAYIN_KEY exists: ${!!PAYIN_KEY}`);
-    console.log(`[Watchpays Debug] PAYIN_KEY value: ${maskedKey}`);
     
-    const safePayloadLog = { ...payload, api_key: maskedKey };
-    console.log(`[Watchpays Debug] Request body: ${JSON.stringify(safePayloadLog)}`);
-    writeLog(`[Watchpays Debug] merchant_id: ${MERCHANT_ID} | PAYIN_KEY exists: ${!!PAYIN_KEY} | key: ${maskedKey}`, 'DEBUG');
+    console.log(`[Watchpays Debug] Request body: ${JSON.stringify(payload)}`);
+    writeLog(`[Watchpays SignStr]: ${safeSignStrLog} | merchant_id: ${MERCHANT_ID}`, 'DEBUG');
     
     try {
         const response = await axios.post(PAYIN_URL, payload, {
