@@ -122,6 +122,149 @@ function getAppUrl(req) {
 }
 
 // ----------------------------------------------------
+// API ENDPOINTS FOR FRONTEND INTEGRATION
+// ----------------------------------------------------
+
+// POST: /create-payment -> Receives payment info and returns payment_url
+app.post('/create-payment', async (req, res) => {
+    const { amount, orderId, customerName, customerEmail, customerPhone } = req.body;
+    
+    if (!amount || !orderId || !customerName || !customerEmail || !customerPhone) {
+        return res.status(400).json({ error: "Missing required parameters" });
+    }
+    
+    const appUrl = getAppUrl(req);
+    const callback_url = `${appUrl}/callback.php`;
+    const return_url = `${appUrl}/success.php?order_id=${orderId}`;
+    const fail_url = `${appUrl}/failed.php?order_id=${orderId}`;
+    
+    const raw_sig_str = amount + callback_url + MERCHANT_ID + orderId + PAYIN_KEY;
+    const signature = md5(raw_sig_str);
+    
+    const txnData = {
+        type: 'PAYIN',
+        amount: parseFloat(amount),
+        customer_name: customerName,
+        customer_email: customerEmail,
+        customer_phone: customerPhone,
+        status: 'PENDING',
+        gateway_txn_id: '',
+        created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    saveTransaction(orderId, txnData);
+    
+    const payload = {
+        merchant_id: MERCHANT_ID,
+        order_id: orderId,
+        amount,
+        name: customerName,
+        email: customerEmail,
+        phone: customerPhone,
+        callback_url,
+        return_url,
+        fail_url,
+        signature
+    };
+    
+    try {
+        const response = await axios.post(PAYIN_URL, new URLSearchParams(payload).toString(), {
+            timeout: 7000,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+        
+        logApiCall(PAYIN_URL, payload, response.data, 'SUCCESS');
+        
+        if (response.data && response.data.payment_url) {
+            return res.json({ status: "SUCCESS", payment_url: response.data.payment_url });
+        } else {
+            const session = getSession(req);
+            session.sandbox_payload = payload;
+            return res.json({ status: "SUCCESS", payment_url: `${appUrl}/payin_sandbox.php` });
+        }
+    } catch (err) {
+        logApiCall(PAYIN_URL, payload, err.message, 'FAILED');
+        const session = getSession(req);
+        session.sandbox_payload = payload;
+        return res.json({ status: "SUCCESS", payment_url: `${appUrl}/payin_sandbox.php` });
+    }
+});
+
+// POST: /create-payout -> Receives payout request and creates transaction
+app.post('/create-payout', async (req, res) => {
+    const { amount, account_number, ifsc, name, bank_name } = req.body;
+    
+    if (!amount || !account_number || !ifsc || !name || !bank_name) {
+        return res.status(400).json({ error: "Missing required parameters" });
+    }
+    
+    if (parseFloat(amount) < 100) {
+        return res.status(400).json({ error: "Amount must be at least ₹100." });
+    }
+    
+    const transaction_id = 'WD_' + Date.now() + Math.floor(Math.random() * 900 + 100);
+    const appUrl = getAppUrl(req);
+    const callback_url = `${appUrl}/payout_callback.php`;
+    
+    const raw_sig_str = account_number + amount + bank_name + callback_url + ifsc + MERCHANT_ID + name + transaction_id + PAYOUT_KEY;
+    const signature = md5(raw_sig_str);
+    
+    const transactionData = {
+        type: 'PAYOUT',
+        account_number,
+        amount: parseFloat(amount),
+        bank_name,
+        ifsc,
+        customer_name: name,
+        transaction_id,
+        status: 'PENDING',
+        created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    saveTransaction(transaction_id, transactionData);
+    
+    const payload = {
+        account_number,
+        amount,
+        bank_name,
+        callback_url,
+        ifsc,
+        merchant_id: MERCHANT_ID,
+        name,
+        transaction_id,
+        signature
+    };
+    
+    try {
+        const response = await axios.post(PAYOUT_URL, new URLSearchParams(payload).toString(), {
+            timeout: 7000,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+        
+        logApiCall(PAYOUT_URL, payload, response.data, 'SUCCESS');
+        
+        if (response.data && response.data.status === 'SUCCESS') {
+            return res.json({ status: "SUCCESS", message: "Payout initiated successfully. Transferred to bank." });
+        } else {
+            const session = getSession(req);
+            session.payout_sandbox_payload = payload;
+            return res.json({
+                status: 'PENDING',
+                message: 'Payout request recorded. Redirecting to simulator...',
+                redirect_sandbox: `${appUrl}/payout_sandbox.php`
+            });
+        }
+    } catch (err) {
+        logApiCall(PAYOUT_URL, payload, err.message, 'FAILED');
+        const session = getSession(req);
+        session.payout_sandbox_payload = payload;
+        return res.json({
+            status: 'PENDING',
+            message: 'Gateway offline. Redirecting to simulator...',
+            redirect_sandbox: `${appUrl}/payout_sandbox.php`
+        });
+    }
+});
+
+// ----------------------------------------------------
 // ROUTES: PAYIN FLOW
 // ----------------------------------------------------
 
@@ -587,7 +730,7 @@ app.get(['/payout.php', '/backend/payout.php'], (req, res) => {
 
             const formData = new URLSearchParams(new FormData(form));
             try {
-                const response = await fetch('/withdrawal_api.php', {
+                const response = await fetch('/create-payout', {
                     method: 'POST',
                     body: formData,
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
