@@ -179,12 +179,6 @@ app.post('/create-payment', async (req, res) => {
     // Generate signature
     const signature = md5(signStr);
     
-    // Safe Debug Logs: log signStr and payload without exposing full key
-    const maskedKey = PAYIN_KEY ? `${PAYIN_KEY.substring(0, 4)}...${PAYIN_KEY.substring(PAYIN_KEY.length - 4)}` : 'MISSING';
-    const safeSignStrLog = signStr.replace(PAYIN_KEY, maskedKey);
-    console.log(`[Watchpays SignStr]: ${safeSignStrLog}`);
-    console.log(`[Watchpays Debug] merchant_id: ${MERCHANT_ID}`);
-    
     const txnData = {
         type: 'PAYIN',
         amount: parseFloat(formattedAmount),
@@ -196,9 +190,10 @@ app.post('/create-payment', async (req, res) => {
         created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     saveTransaction(orderId, txnData);
-    
+
     const payload = {
         merchant_id: MERCHANT_ID,
+        api_key: PAYIN_KEY,
         merchant_order_no: merchant_order_no,
         amount: formattedAmount,
         name: customerName,
@@ -210,8 +205,18 @@ app.post('/create-payment', async (req, res) => {
         signature
     };
     
-    console.log(`[Watchpays Debug] Request body: ${JSON.stringify(payload)}`);
-    writeLog(`[Watchpays SignStr]: ${safeSignStrLog} | merchant_id: ${MERCHANT_ID}`, 'DEBUG');
+    // Safe Debug Logs: log signStr and payload without exposing full key
+    const maskedKey = PAYIN_KEY ? `${PAYIN_KEY.substring(0, 4)}...${PAYIN_KEY.substring(PAYIN_KEY.length - 4)}` : 'MISSING';
+    const keyExists = !!PAYIN_KEY;
+    const safeSignStrLog = signStr.replace(PAYIN_KEY, maskedKey);
+    const safePayloadLog = { ...payload, api_key: maskedKey };
+    
+    console.log(`[Watchpays SignStr]: ${safeSignStrLog}`);
+    console.log(`[Watchpays Debug] merchant_id: ${MERCHANT_ID}`);
+    console.log(`[Watchpays Debug] PAYIN_KEY exists: ${keyExists}`);
+    console.log(`[Watchpays Debug] PAYIN_KEY value: ${maskedKey}`);
+    console.log(`[Watchpays Debug] Request body: ${JSON.stringify(safePayloadLog)}`);
+    writeLog(`[Watchpays SignStr]: ${safeSignStrLog} | merchant_id: ${MERCHANT_ID} | PAYIN_KEY exists: ${keyExists} | key: ${maskedKey}`, 'DEBUG');
     
     try {
         const response = await axios.post(PAYIN_URL, payload, {
